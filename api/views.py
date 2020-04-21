@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from .models import Comment, Follow, Group, Post
+from .models import Comment, Follow, Group, Post, User
 from .permissions import isAuthorOrReadOnly
 from .serializers import (CommentSerializer, FollowSerializer, GroupSerializer,
                           PostSerializer)
@@ -16,7 +16,7 @@ class PostViewSet(ModelViewSet):
     serializer_class = PostSerializer
     permission_classes = [isAuthorOrReadOnly, ]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['group', ]
+    filterset_fields = ['group',]
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -26,7 +26,7 @@ class CommentViewSet(ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     lookup_url_kwargs = ('post', 'id')
-    permission_classes = [isAuthorOrReadOnly, ]
+    permission_classes = [isAuthorOrReadOnly,]
 
     def list(self, request, **kwargs):
         queryset = Comment.objects.filter(post=kwargs['post_id'])
@@ -41,12 +41,12 @@ class GroupViewSet(ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
-
+    
 
 class FollowViewSet(ModelViewSet):
     queryset = Follow.objects.all()
     serializer_class = FollowSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, ]
+    permission_classes = [IsAuthenticatedOrReadOnly,]
     filter_backends = [filters.SearchFilter]
     search_fields = ['=user__username', '=following__username']
 
@@ -55,16 +55,15 @@ class FollowViewSet(ModelViewSet):
         following = request.data.get('following')
         try:
             following_user = User.objects.get(username=following)
-            is_follow = Follow.objects.filter(
-                user=request.user, following=following_user).exists()
+            is_follow = Follow.objects.filter(user=request.user, following=following_user).exists()
             if is_follow:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
         except:
             pass
-
-        if not following or following == request.user.username:
+        
+        if not following or following == request.user.username:    
             return Response(status=status.HTTP_400_BAD_REQUEST)
-
+        
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
