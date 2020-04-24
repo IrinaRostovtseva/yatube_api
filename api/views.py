@@ -16,22 +16,20 @@ class PostViewSet(ModelViewSet):
     serializer_class = PostSerializer
     permission_classes = [isAuthorOrReadOnly, ]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['group',]
+    filterset_fields = ['group', ]
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
 
 class CommentViewSet(ModelViewSet):
-    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     lookup_url_kwargs = ('post', 'id')
-    permission_classes = [isAuthorOrReadOnly,]
+    permission_classes = [isAuthorOrReadOnly, ]
 
-    def list(self, request, **kwargs):
-        queryset = Comment.objects.filter(post=kwargs['post_id'])
-        serializer = CommentSerializer(queryset, many=True)
-        return Response(serializer.data)
+    def get_queryset(self):
+        queryset = Comment.objects.filter(post=self.kwargs.get('post_id'))
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -41,30 +39,14 @@ class GroupViewSet(ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
-    
+
 
 class FollowViewSet(ModelViewSet):
     queryset = Follow.objects.all()
     serializer_class = FollowSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly,]
+    permission_classes = [IsAuthenticatedOrReadOnly, ]
     filter_backends = [filters.SearchFilter]
     search_fields = ['=user__username', '=following__username']
 
-    def create(self, request):
-        serializer = self.get_serializer(data=request.data)
-        following = request.data.get('following')
-        try:
-            following_user = User.objects.get(username=following)
-            is_follow = Follow.objects.filter(user=request.user, following=following_user).exists()
-            if is_follow:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
-        except:
-            pass
-        
-        if not following or following == request.user.username:    
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-        
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
